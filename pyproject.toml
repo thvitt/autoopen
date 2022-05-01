@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "autoopen"
 version = "0.1.0"
-description = ""
-authors = ["Thorsten Vitt <thorsten.vitt@uni-wuerzburg.de>"]
+description = "Automatically compress or decompress files on open by filename."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/thvitt/autoopen"
+authors = ["Thorsten Vitt <tv@thorstenvitt.de>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
