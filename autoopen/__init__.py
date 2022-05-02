@@ -39,9 +39,9 @@ from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Callable
 
-__all__ = ['autoopen']
+__all__ = ["autoopen"]
 
-open_handlers: dict[str, list['OpenHandler']] = defaultdict(list)
+open_handlers: dict[str, list["OpenHandler"]] = defaultdict(list)
 
 
 class NoCompressorError(IOError):
@@ -49,8 +49,8 @@ class NoCompressorError(IOError):
 
 
 def find_handler(filename, checked=True):
-    if filename == '-':
-        candidates = open_handlers['-']
+    if filename == "-":
+        candidates = open_handlers["-"]
     else:
         path = Path(filename)
         last_suffix = path.suffixes[-1] if path.suffixes else None
@@ -61,8 +61,8 @@ def find_handler(filename, checked=True):
                 return candidate
         if checked:  # candidates, but none works
             raise NoCompressorError(
-                    f"The file {filename} is compressed, but no matching compressor is available. Failed to import:\n" +
-                    "\n".join(f' - {c.module} for {c.description}' for c in candidates)
+                f"The file {filename} is compressed, but no matching compressor is available. Failed to import:\n"
+                + "\n".join(f" - {c.module} for {c.description}" for c in candidates)
             )
         else:
             return None
@@ -70,7 +70,7 @@ def find_handler(filename, checked=True):
         return open_handlers[None][0]  # handler using default open function
 
 
-def autoopen(file, mode='rt', encoding=None, errors=None, newline=None):
+def autoopen(file, mode="rt", encoding=None, errors=None, newline=None):
     """
     Opens a file, transparently (de-)compressing it by filename.
 
@@ -81,10 +81,16 @@ def autoopen(file, mode='rt', encoding=None, errors=None, newline=None):
     If file is the special string `-`, it will return stdin or stdout, depending on the mode.
     """
     handler = find_handler(file)
-    return handler(os.fspath(file), mode=mode, encoding=encoding, errors=errors, newline=newline)
+    return handler(
+        os.fspath(file), mode=mode, encoding=encoding, errors=errors, newline=newline
+    )
 
 
-def openhandler(*extensions: List[str], description: Optional[str] = None, module: Optional[str] = None):
+def openhandler(
+    *extensions: List[str],
+    description: Optional[str] = None,
+    module: Optional[str] = None,
+):
     """
     Decorator that registers a function as an open function for the given extensions.
 
@@ -98,7 +104,9 @@ def openhandler(*extensions: List[str], description: Optional[str] = None, modul
     """
 
     def create_handler(f):
-        handler = OpenHandler(extensions, description=description, module=module, open_function=f)
+        handler = OpenHandler(
+            extensions, description=description, module=module, open_function=f
+        )
         handler.register()
         return handler
 
@@ -116,6 +124,7 @@ class OpenHandler:
         module: Optional name of a module that is required for the handler to work
         open_function: An implementation of open that works like builtins.open()
     """
+
     suffixes: List[str]
     description: Optional[str] = None
     module: Optional[str] = None
@@ -141,39 +150,43 @@ class OpenHandler:
             except ImportError:
                 return False
 
-    def __call__(self, file, mode='rt', encoding=None, errors=None, newline=None):
+    def __call__(self, file, mode="rt", encoding=None, errors=None, newline=None):
         if self.open_function is None:
             if self.module is not None:
                 module = self.load_module()
                 self.open_function = module.open
             else:
                 raise NotImplementedError(
-                        f"Neither open implementation nor module with open function provided. This is a bug.")
-        return self.open_function(file, mode=mode, encoding=encoding, errors=errors, newline=newline)
+                    f"Neither open implementation nor module with open function provided. This is a bug."
+                )
+        return self.open_function(
+            file, mode=mode, encoding=encoding, errors=errors, newline=newline
+        )
 
 
 # Now, let's define and register some default handlers. These are from the standard library:
 
-OpenHandler(['.gz'], description='GZip', module='gzip').register()
-OpenHandler(['.bz2'], description='BZip2', module='bz2').register()
-OpenHandler(['.xz'], description='LZMA files (.xz format)', module='lzma').register()
-OpenHandler([None], description='uncompressed files', open_function=open).register()
+OpenHandler([".gz"], description="GZip", module="gzip").register()
+OpenHandler([".bz2"], description="BZip2", module="bz2").register()
+OpenHandler([".xz"], description="LZMA files (.xz format)", module="lzma").register()
+OpenHandler([None], description="uncompressed files", open_function=open).register()
 
 
-@openhandler('.lzma', description='LZMA files (deprecated .lzma format', module='lzma')
-def open_xz(filename, mode='rt', **kwargs):
+@openhandler(".lzma", description="LZMA files (deprecated .lzma format", module="lzma")
+def open_xz(filename, mode="rt", **kwargs):
     import lzma
+
     return lzma.open(filename, mode, format=FORMAT_ALONE, **kwargs)
 
 
 # Here is our special stdin/out handler. TODO text/binary handling?
-@openhandler('-', description='Use - to use stdin/stdout')
-def open_stdinout(filename, mode='rt', **kwargs):
-    if 'r' in mode:
+@openhandler("-", description="Use - to use stdin/stdout")
+def open_stdinout(filename, mode="rt", **kwargs):
+    if "r" in mode:
         return nullcontext(sys.stdin)
     else:
         return nullcontext(sys.stdout)
 
 
 # The zstandard handler will only work if the corresponding library is present.
-OpenHandler(['.zst', '.zstd'], description='ZStandard', module='zstandard').register()
+OpenHandler([".zst", ".zstd"], description="ZStandard", module="zstandard").register()
