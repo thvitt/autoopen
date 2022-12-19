@@ -1,4 +1,5 @@
 import importlib.util
+import io
 from pathlib import Path
 
 import pytest
@@ -37,3 +38,19 @@ def test_read_unavailable(test_path):
     with pytest.raises(NoCompressorError):
         with autoopen(test_path / "hello.txt.doesnotexist", "rt") as f:
             return f.read()
+
+
+def test_hyphen_read(monkeypatch):
+    s = "Hello World!\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO(s))
+    with autoopen("-") as f:
+        assert f.read() == s
+
+
+def test_hyphen_write(monkeypatch):
+    s = "Hello World!\n"
+    fakeio = io.StringIO()
+    monkeypatch.setattr("sys.stdout", fakeio)
+    with autoopen("-", "wt") as f:
+        f.write(s)
+    assert fakeio.getvalue() == s
